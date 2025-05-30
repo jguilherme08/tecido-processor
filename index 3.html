@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Processador de Tecidos</title>
+<style>
+  body { font-family: sans-serif; text-align: center; padding: 10px; background: #f2f2f2; }
+  canvas { max-width: 100%; height: auto; margin-top: 10px; }
+  input[type="range"] { width: 80%; }
+  label { display: block; margin-top: 10px; font-weight: bold; }
+</style>
+</head>
+<body>
+<h2>Processamento de Imagem por Tecidos</h2>
+<input type="file" accept="image/*" onchange="loadImage(event)">
+<br>
+<canvas id="canvas" width="512" height="512"></canvas>
+
+<label>Shadow Recovery: <span id="val1">50</span></label>
+<input type="range" min="0" max="100" value="50" oninput="adjustImage()" id="shadow">
+
+<label>Highlight Suppression: <span id="val2">50</span></label>
+<input type="range" min="0" max="100" value="50" oninput="adjustImage()" id="highlight">
+
+<label>Sharpness (Deconvolution): <span id="val3">5</span></label>
+<input type="range" min="0" max="10" value="5" oninput="adjustImage()" id="sharp">
+
+<label>Local Contrast: <span id="val4">25</span></label>
+<input type="range" min="0" max="50" value="25" oninput="adjustImage()" id="contrast">
+
+<script>
+let originalImage = null;
+
+function loadImage(event) {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    const img = new Image();
+    img.onload = function() {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+      originalImage = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      adjustImage();
+    }
+    img.src = e.target.result;
+  }
+  reader.readAsDataURL(event.target.files[0]);
+}
+
+function adjustImage() {
+  if (!originalImage) return;
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+  const data = new Uint8ClampedArray(originalImage.data);
+
+  const shadow = parseInt(document.getElementById('shadow').value);
+  const highlight = parseInt(document.getElementById('highlight').value);
+  const sharp = parseInt(document.getElementById('sharp').value);
+  const contrast = parseInt(document.getElementById('contrast').value);
+
+  document.getElementById('val1').textContent = shadow;
+  document.getElementById('val2').textContent = highlight;
+  document.getElementById('val3').textContent = sharp;
+  document.getElementById('val4').textContent = contrast;
+
+  for (let i = 0; i < data.length; i += 4) {
+    for (let c = 0; c < 3; c++) {
+      let val = data[i + c];
+      val = val + shadow - highlight;
+      val = (val - 128) * (1 + contrast / 25) + 128;
+      val = val + sharp * (Math.random() * 4 - 2);
+      data[i + c] = Math.min(255, Math.max(0, val));
+    }
+  }
+
+  const output = new ImageData(data, originalImage.width, originalImage.height);
+  ctx.putImageData(output, 0, 0);
+}
+</script>
+</body>
+</html>
